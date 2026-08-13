@@ -19,6 +19,7 @@ Feel free to explore the application to discover its features. Note that the app
 - [How to run the application (legacy, manual setup)](#how-to-run-the-application-legacy-manual-setup)
 - [How to run the application's tests? (legacy, manual setup)](#how-to-run-the-applications-tests-legacy-manual-setup)
 - [Local development environment (recommended)](#local-development-environment-recommended)
+- [Continuous Integration](#continuous-integration)
 - [Tasks](#tasks)
   - [Task 1: Standard local development environment](#task-1-standard-local-development-environment)
   - [Task 2: Continuous Integration](#task-2-continuous-integration)
@@ -147,6 +148,24 @@ This builds the images, starts PostgreSQL, applies database migrations automatic
 **Other commands**
 
 All recurring commands (starting/stopping the stack, running the backend and frontend test suites, applying migrations by hand, tailing logs, ...) are defined as `make` targets. Run `make help` to list them, or read the [Makefile](./Makefile) directly.
+
+**One-time setup: git hooks**
+
+```bash
+make install-hooks
+```
+
+Wires up this repo's `pre-commit` (backend + frontend linters) and `pre-push` (linters + both test suites) hooks, so style/test issues are caught before they reach a pull request. Skip a one-off check with `git commit`/`git push --no-verify`.
+
+## Continuous Integration
+
+Every pull request runs automatically on GitHub Actions, scoped to what it actually touches:
+
+- **`CI - Backend`** (on changes under `backend/`, `docker-compose.yml`, `Makefile`): ruff lint + format check, the pytest suite against a disposable Postgres service, and a Docker build sanity check (no push).
+- **`CI - Frontend`** (on changes under `frontend/`, `docker-compose.yml`, `Makefile`): eslint + prettier check, the Jest suite, and a Docker build sanity check (no push).
+- **`Publish images`**: on every push to `main`, builds and pushes the backend and frontend images to GHCR, tagged with the commit SHA (plus a rolling `main` tag) — so any commit on `main` has a corresponding, retrievable build.
+
+See [.github/workflows](./.github/workflows) for the full definitions.
 
 ## Tasks
 

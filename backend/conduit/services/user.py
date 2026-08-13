@@ -59,17 +59,23 @@ class UserService(IUserService):
         current_user: UserDTO,
         user_to_update: UpdateUserDTO,
     ) -> UpdatedUserDTO:
-        if user_to_update.username and user_to_update.username != current_user.username:
-            if await self._user_repo.get_by_username_or_none(
+        if (
+            user_to_update.username
+            and user_to_update.username != current_user.username
+            and await self._user_repo.get_by_username_or_none(
                 session=session, username=user_to_update.username
-            ):
-                raise UserNameAlreadyTakenException()
+            )
+        ):
+            raise UserNameAlreadyTakenException()
 
-        if user_to_update.email and user_to_update.email != current_user.email:
-            if await self._user_repo.get_by_email_or_none(
+        if (
+            user_to_update.email
+            and user_to_update.email != current_user.email
+            and await self._user_repo.get_by_email_or_none(
                 session=session, email=user_to_update.email
-            ):
-                raise EmailAlreadyTakenException()
+            )
+        ):
+            raise EmailAlreadyTakenException()
 
         updated_user = await self._user_repo.update(
             session=session, user_id=current_user.id, update_item=user_to_update

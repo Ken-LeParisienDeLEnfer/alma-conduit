@@ -1,5 +1,6 @@
 """
-Integration tests for user registration and login (POST /api/users, POST /api/users/login).
+Integration tests for user registration and login (POST /api/users, POST
+/api/users/login).
 """
 
 from tests.conftest import ALICE

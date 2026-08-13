@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Unpack
+from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -16,7 +16,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
     rate_limit_duration = timedelta(minutes=1)
     rate_limit_requests = 100
 
-    def __init__(self, *args: Unpack[tuple[Any]], **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # Dictionary to store request counts for each IP.
         self.request_counts: dict[str, tuple[int, datetime]] = {}

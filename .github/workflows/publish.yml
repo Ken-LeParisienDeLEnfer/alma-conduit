@@ -1,0 +1,69 @@
+name: Publish images
+
+# On every push to main — not on PRs — so each commit landing on main gets a
+# corresponding, retrievable build (per Task 2), without publishing
+# speculative images for unmerged work. workflow_dispatch lets this be run
+# by hand from any branch (Actions tab -> Publish images -> Run workflow),
+# e.g. to validate the GHCR push from a PR branch before merging, or to
+# retry a publish that failed for unrelated reasons (registry hiccup, ...).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR image paths must be lowercase; the repo name isn't. The rolling
+      # ":main" tag only moves on a real push to main — a manual
+      # workflow_dispatch run from a PR branch (used to validate this
+      # workflow before merging) still gets a real, pushed, SHA-tagged
+      # image, just without repointing ":main" at unmerged work.
+      - name: Compute image tags
+        id: image
+        run: |
+          name="${REGISTRY}/${{ github.repository }}-${{ matrix.service }}"
+          name="${name,,}"
+          tags="$name:${{ github.sha }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            tags="$(printf '%s\n%s' "$tags" "$name:main")"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+
+      # Required for a reliable build+push: without a docker-container
+      # builder, larger images (the frontend's node_modules-heavy build in
+      # particular) can hit "ERROR: failed to build: unknown blob" on push.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ steps.image.outputs.tags }}

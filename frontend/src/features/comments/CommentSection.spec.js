@@ -153,7 +153,9 @@ describe("<CommentSection />", () => {
 		expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: /sign up/i })).toBeInTheDocument();
 
-		await waitForElementToBeRemoved(() => screen.getByText("Loading comments"));
+		await waitForElementToBeRemoved(() =>
+			screen.queryByText("Loading comments"),
+		);
 
 		await expect(screen.findAllByTestId("comment")).resolves.not.toHaveLength(
 			0,
@@ -197,7 +199,9 @@ describe("<CommentSection />", () => {
 
 		expect(screen.queryByRole("list")).not.toBeInTheDocument();
 
-		await waitForElementToBeRemoved(() => screen.getByText("Loading comments"));
+		await waitForElementToBeRemoved(() =>
+			screen.queryByText("Loading comments"),
+		);
 
 		await expect(screen.findAllByTestId("comment")).resolves.not.toHaveLength(
 			0,
@@ -236,7 +240,9 @@ describe("<CommentSection />", () => {
 
 		expect(screen.queryByRole("list")).not.toBeInTheDocument();
 
-		await waitForElementToBeRemoved(() => screen.getByText("Loading comments"));
+		await waitForElementToBeRemoved(() =>
+			screen.queryByText("Loading comments"),
+		);
 
 		await expect(screen.findAllByTestId("comment")).resolves.not.toHaveLength(
 			0,
@@ -267,7 +273,9 @@ describe("<CommentSection />", () => {
 
 		expect(screen.queryByRole("list")).not.toBeInTheDocument();
 
-		await waitForElementToBeRemoved(() => screen.getByText("Loading comments"));
+		await waitForElementToBeRemoved(() =>
+			screen.queryByText("Loading comments"),
+		);
 
 		await expect(screen.findAllByTestId("comment")).resolves.not.toHaveLength(
 			0,

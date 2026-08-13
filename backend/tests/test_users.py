@@ -3,7 +3,6 @@ Integration tests for the current-user endpoints (GET/PUT /api/user).
 """
 
 
-
 async def test_get_current_user_returns_profile(client, alice, alice_headers):
     resp = await client.get("/api/user", headers=alice_headers)
     assert resp.status_code == 200

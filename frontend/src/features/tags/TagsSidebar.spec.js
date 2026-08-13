@@ -35,7 +35,7 @@ describe("<TagsSidebar />", () => {
 
 		screen.getByText(/popular tags/i);
 
-		await waitForElementToBeRemoved(screen.getByText(/loading tags/i));
+		await waitForElementToBeRemoved(() => screen.queryByText(/loading tags/i));
 
 		expect(screen.getAllByRole("button")).not.toHaveLength(0);
 	});

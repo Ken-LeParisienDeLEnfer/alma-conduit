@@ -4,7 +4,6 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "../features/auth/authSlice";
 import commentsReducer from "../features/comments/commentsSlice";
 import tagsReducer from "../features/tags/tagsSlice";
-import history from "./history";
 import { localStorageMiddleware } from "./middleware";
 import articleReducer from "../reducers/article";
 import articlesReducer from "../reducers/articleList";

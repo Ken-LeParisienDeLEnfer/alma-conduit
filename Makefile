@@ -1,5 +1,7 @@
 .DEFAULT_GOAL := help
-.PHONY: help up up-build down logs ps test-backend test-frontend migrate clean
+.PHONY: help up up-build down logs ps test-backend test-frontend migrate clean \
+	lint-backend lint-frontend format-backend format-frontend \
+	build-backend build-frontend install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -28,6 +30,28 @@ test-backend: ## Run the backend test suite against a disposable test database
 
 test-frontend: ## Run the frontend test suite
 	docker compose run --build --rm frontend npm test -- --watchAll=false
+
+lint-backend: ## Check backend code style (ruff check + format --check)
+	docker compose run --rm --entrypoint '' backend sh -c "uv run ruff check . && uv run ruff format --check ."
+
+lint-frontend: ## Check frontend code style (eslint + prettier --check)
+	docker compose run --rm frontend sh -c "npm run lint && npm run format:check"
+
+format-backend: ## Auto-fix backend code style in place
+	docker compose run --rm --entrypoint '' backend sh -c "uv run ruff check --fix . && uv run ruff format ."
+
+format-frontend: ## Auto-fix frontend code style in place
+	docker compose run --rm frontend npm run format
+
+build-backend: ## Build the backend image only (sanity-check the Dockerfile)
+	docker compose build backend
+
+build-frontend: ## Build the frontend image only (sanity-check the Dockerfile)
+	docker compose build frontend
+
+install-hooks: ## One-time setup: wire up the repo's pre-commit/pre-push hooks
+	git config core.hooksPath .githooks
+	@echo "Hooks installed: pre-commit runs linters, pre-push runs linters + tests."
 
 clean: ## Stop the stack and remove its volumes (database data, installed deps)
 	docker compose down --volumes

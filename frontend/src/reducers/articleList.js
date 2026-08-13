@@ -24,7 +24,7 @@ export const getAllArticles = createAsyncThunk(
 					tag: tag ?? thunkApi.getState().articleList.tag,
 					favorited: favorited ?? thunkApi.getState().articleList.favorited,
 					limit: thunkApi.getState().articleList.articlesPerPage ?? 10,
-				}),
+			  }),
 );
 
 export const getArticlesByTag = createAsyncThunk(
@@ -76,7 +76,7 @@ const articleListSlice = createSlice({
 							...article,
 							favorited: action.payload.article.favorited,
 							favoritesCount: action.payload.article.favoritesCount,
-						}
+					  }
 					: article,
 			);
 		});
@@ -88,7 +88,7 @@ const articleListSlice = createSlice({
 							...article,
 							favorited: action.payload.article.favorited,
 							favoritesCount: action.payload.article.favoritesCount,
-						}
+					  }
 					: article,
 			);
 		});

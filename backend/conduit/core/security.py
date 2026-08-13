@@ -23,10 +23,10 @@ class HTTPTokenHeader(APIKeyHeader):
 
         try:
             token_prefix, token = api_key.split(" ")
-        except ValueError:
+        except ValueError as err:
             raise HTTPException(
                 status_code=HTTP_403_FORBIDDEN, detail="Invalid token schema"
-            )
+            ) from err
 
         if token_prefix.lower() != "token":
             raise HTTPException(
