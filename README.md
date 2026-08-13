@@ -20,6 +20,7 @@ Feel free to explore the application to discover its features. Note that the app
 - [How to run the application's tests? (legacy, manual setup)](#how-to-run-the-applications-tests-legacy-manual-setup)
 - [Local development environment (recommended)](#local-development-environment-recommended)
 - [Continuous Integration](#continuous-integration)
+- [Releasing](#releasing)
 - [Tasks](#tasks)
   - [Task 1: Standard local development environment](#task-1-standard-local-development-environment)
   - [Task 2: Continuous Integration](#task-2-continuous-integration)
@@ -163,9 +164,29 @@ Every pull request runs automatically on GitHub Actions, scoped to what it actua
 
 - **`CI - Backend`** (on changes under `backend/`, `docker-compose.yml`, `Makefile`): ruff lint + format check, the pytest suite against a disposable Postgres service, and a Docker build sanity check (no push).
 - **`CI - Frontend`** (on changes under `frontend/`, `docker-compose.yml`, `Makefile`): eslint + prettier check, the Jest suite, and a Docker build sanity check (no push).
-- **`Publish images`**: on every push to `main`, builds and pushes the backend and frontend images to GHCR, tagged with the commit SHA (plus a rolling `main` tag) — so any commit on `main` has a corresponding, retrievable build.
+- **`Release`**: on every push to `main`, builds and pushes the backend and frontend images to GHCR (tagged with the commit SHA, plus a rolling `main` tag), then cuts a release — see [Releasing](#releasing) below.
 
 See [.github/workflows](./.github/workflows) for the full definitions.
+
+## Releasing
+
+Every merge to `main` is a release: no manual step, no hand-editing [infrastructure/release.yaml](./infrastructure/release.yaml). The `Release` workflow, once the images above are pushed:
+
+1. Reads the label on the pull request that was just merged to decide the version bump.
+2. Bumps `infrastructure/release.yaml`'s `version`, points its `images` at the commit's freshly-pushed GHCR images, and commits that change directly to `main`.
+3. Tags the release (`vX.Y.Z`) and publishes a [GitHub Release](../../releases) with auto-generated notes (grouped from the PRs merged since the last release).
+
+**Label your PR before merging** — this is what decides the version bump:
+
+| Label | Bump | Use for |
+|---|---|---|
+| `release:major` | `X`.0.0 | Breaking change |
+| `release:minor` | x.`Y`.0 | New backward-compatible feature |
+| `release:patch` (or no label) | x.y.`Z` | Bug fix, chore, docs, anything else — **this is the default if you forget to label** |
+
+Forgetting a label never blocks your merge — it just falls back to a patch release, so there's no excuse to skip labeling deliberately, but also no way to get stuck.
+
+**To see releases**: the [Releases page](../../releases) lists every version with its changelog. **To see what's currently declared**: [infrastructure/release.yaml](./infrastructure/release.yaml) on `main` always reflects it — that file is the single source of truth an external tool syncs production against.
 
 ## Tasks
 
