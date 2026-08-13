@@ -1,6 +1,6 @@
 # Standard local development Docker environment for Conduit.
 #
-# `docker compose up --build` brings up the database and backend,
+# `docker compose up --build` brings up the database, backend and frontend,
 # reachable at http://localhost:4100 (UI) and http://localhost:8080 (API),
 # with no local install of uv/Node/Postgres required.
 #
@@ -12,6 +12,7 @@
 services:
   db:
     image: postgres:16-alpine
+    container_name: conduit-db
     env_file: ./backend/.env
     ports:
       - "5432:5432"
@@ -24,6 +25,7 @@ services:
       retries: 10
 
   backend:
+    container_name: conduit-backend
     build:
       context: ./backend
     env_file: ./backend/.env
@@ -38,9 +40,27 @@ services:
       db:
         condition: service_healthy
 
+  frontend:
+    container_name: conduit-frontend
+    build:
+      context: ./frontend
+    environment:
+      # Resolved from the browser, not from inside the container network, so
+      # this must stay a host-reachable URL rather than the "backend"
+      # service name.
+      REACT_APP_BACKEND_URL: http://localhost:8080/api
+    ports:
+      - "4100:4100"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      - backend
+
   test-db:
     profiles: ["test"]
     image: postgres:16-alpine
+    container_name: conduit-test-db
     env_file: ./backend/.env.test
     ports:
       - "5433:5432"
@@ -52,6 +72,7 @@ services:
 
   backend-test:
     profiles: ["test"]
+    container_name: conduit-test-backend
     build:
       context: ./backend
     env_file: ./backend/.env.test
@@ -76,3 +97,4 @@ services:
 volumes:
   postgres-data:
   backend-venv:
+  frontend-node-modules:
