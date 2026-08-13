@@ -1,0 +1,6 @@
+# Force LF line endings for all text files on checkout, regardless of the
+# checking-out machine's core.autocrlf setting. Without this, Windows
+# checkouts silently convert shell scripts (backend/docker/entrypoint.sh,
+# .githooks/*) to CRLF, which breaks their "#!/bin/sh" shebang once copied
+# into a Linux container ("exec /entrypoint.sh: no such file or directory").
+* text=auto eol=lf

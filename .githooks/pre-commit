@@ -1,0 +1,13 @@
+#!/bin/sh
+# Fast local gate: style only. Wired up via `make install-hooks`
+# (git config core.hooksPath .githooks). Reuses the exact same Make targets
+# CI runs, so "passes locally" and "passes in CI" mean the same thing.
+#
+# Skip on a one-off commit with: git commit --no-verify
+set -e
+
+echo "[pre-commit] Linting backend..."
+make lint-backend
+
+echo "[pre-commit] Linting frontend..."
+make lint-frontend

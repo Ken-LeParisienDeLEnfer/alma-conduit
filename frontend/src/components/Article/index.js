@@ -8,11 +8,10 @@ import TagsList from "../../features/tags/TagsList";
 import { articlePageUnloaded, getArticle } from "../../reducers/article";
 import ArticleMeta from "./ArticleMeta";
 
-const CommentSection = lazy(
-	() =>
-		import(
-			/* webpackChunkName: "CommentSection", webpackPrefetch: true  */ "../../features/comments/CommentSection"
-		),
+const CommentSection = lazy(() =>
+	import(
+		/* webpackChunkName: "CommentSection", webpackPrefetch: true  */ "../../features/comments/CommentSection"
+	),
 );
 
 /**

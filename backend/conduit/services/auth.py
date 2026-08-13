@@ -48,9 +48,9 @@ class UserAuthService(IUserAuthService):
             user = await self._user_service.get_user_by_email(
                 session=session, email=user_to_login.email
             )
-        except UserNotFoundException:
+        except UserNotFoundException as err:
             logger.error("User not found", email=user_to_login.email)
-            raise IncorrectLoginInputException()
+            raise IncorrectLoginInputException() from err
 
         if not verify_password(
             plain_password=user_to_login.password, hashed_password=user.password_hash

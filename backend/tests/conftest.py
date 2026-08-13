@@ -66,8 +66,8 @@ async def clean_db(db_engine):
         # RESTART IDENTITY resets auto-increment sequences too.
         await conn.execute(
             text(
-                'TRUNCATE "user", tag, article, article_tag, comment, favorite, follower'
-                " RESTART IDENTITY CASCADE"
+                'TRUNCATE "user", tag, article, article_tag, comment,'
+                " favorite, follower RESTART IDENTITY CASCADE"
             )
         )
 

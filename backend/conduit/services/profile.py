@@ -31,9 +31,9 @@ class ProfileService(IProfileService):
             target_user = await self._user_service.get_user_by_username(
                 session=session, username=username
             )
-        except UserNotFoundException:
+        except UserNotFoundException as err:
             logger.exception("Profile not found", username=username)
-            raise ProfileNotFoundException()
+            raise ProfileNotFoundException() from err
 
         profile = ProfileDTO(
             user_id=target_user.id,

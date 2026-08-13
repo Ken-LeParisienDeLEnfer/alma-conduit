@@ -57,7 +57,7 @@ function FollowUserButton({ username, following }) {
 
 	const handleClick = () => {
 		if (!currentUser) {
-			navigate.push(`/register?redirectTo=${location.pathname}`);
+			navigate.push(`/register?redirectTo=${window.location.pathname}`);
 			return;
 		}
 

@@ -31,6 +31,6 @@ class AuthTokenService(IAuthTokenService):
             payload = jwt.decode(token, self._secret_key, algorithms=[self._algorithm])
         except jwt.InvalidTokenError as err:
             logger.error("Invalid JWT token", token=token, error=err)
-            raise IncorrectJWTTokenException()
+            raise IncorrectJWTTokenException() from err
 
         return TokenPayloadDTO(user_id=payload["user_id"], username=payload["username"])

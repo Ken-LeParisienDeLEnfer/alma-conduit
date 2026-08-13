@@ -11,15 +11,22 @@
 import snarkdown from "snarkdown";
 import xss from "xss";
 
-/** Mirrors the exact expression used inside the Article component. */
-function renderBody(body) {
+/**
+ * Mirrors the exact expression used inside the Article component.
+ *
+ * Named to avoid the `render*` prefix: eslint-plugin-testing-library's
+ * render-result-naming-convention rule pattern-matches on that prefix and
+ * would otherwise mistake this plain sanitization helper for a
+ * @testing-library/react `render()` call.
+ */
+function sanitizeBody(body) {
 	return xss(snarkdown(body));
 }
 
 describe("Article body – XSS sanitization", () => {
 	it("neutralizes <script> tags in article body (encodes them as HTML entities)", () => {
 		const body = 'Hello <script>alert("xss")</script> world';
-		const html = renderBody(body);
+		const html = sanitizeBody(body);
 
 		// The xss library encodes angle brackets, preventing script execution.
 		// The raw <script> tag must not appear as executable HTML.
@@ -32,42 +39,42 @@ describe("Article body – XSS sanitization", () => {
 
 	it("strips inline event handlers (onerror) from img tags", () => {
 		const body = '<img src="x" onerror="alert(1)">';
-		const html = renderBody(body);
+		const html = sanitizeBody(body);
 
 		expect(html).not.toContain("onerror");
 	});
 
 	it("strips javascript: href links", () => {
 		const body = '<a href="javascript:alert(1)">click me</a>';
-		const html = renderBody(body);
+		const html = sanitizeBody(body);
 
 		expect(html).not.toContain("javascript:");
 	});
 
 	it("renders bold markdown correctly", () => {
 		const body = "This is **bold** text";
-		const html = renderBody(body);
+		const html = sanitizeBody(body);
 
 		expect(html).toContain("<strong>bold</strong>");
 	});
 
 	it("renders italic markdown correctly", () => {
 		const body = "This is _italic_ text";
-		const html = renderBody(body);
+		const html = sanitizeBody(body);
 
 		expect(html).toContain("<em>italic</em>");
 	});
 
 	it("renders plain text without modification", () => {
 		const body = "Just a plain sentence.";
-		const html = renderBody(body);
+		const html = sanitizeBody(body);
 
 		expect(html).toContain("Just a plain sentence.");
 	});
 
 	it("allows safe anchor tags through", () => {
 		const body = "[visit](https://example.com)";
-		const html = renderBody(body);
+		const html = sanitizeBody(body);
 
 		expect(html).toContain('href="https://example.com"');
 	});
