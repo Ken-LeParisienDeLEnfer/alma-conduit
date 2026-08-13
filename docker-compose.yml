@@ -1,0 +1,100 @@
+# Standard local development Docker environment for Conduit.
+#
+# `docker compose up --build` brings up the database, backend and frontend,
+# reachable at http://localhost:4100 (UI) and http://localhost:8080 (API),
+# with no local install of uv/Node/Postgres required.
+#
+# The `test` profile adds an isolated Postgres instance + a one-shot backend
+# container for running the backend test suite (see backend/.env.test and
+# the Makefile's `test-backend` target); it never starts with a plain
+# `docker compose up`.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: conduit-db
+    env_file: ./backend/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    container_name: conduit-backend
+    build:
+      context: ./backend
+    env_file: ./backend/.env
+    environment:
+      POSTGRES_HOST: db
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - backend-venv:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    container_name: conduit-frontend
+    build:
+      context: ./frontend
+    environment:
+      # Resolved from the browser, not from inside the container network, so
+      # this must stay a host-reachable URL rather than the "backend"
+      # service name.
+      REACT_APP_BACKEND_URL: http://localhost:8080/api
+    ports:
+      - "4100:4100"
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    depends_on:
+      - backend
+
+  test-db:
+    profiles: ["test"]
+    image: postgres:16-alpine
+    container_name: conduit-test-db
+    env_file: ./backend/.env.test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend-test:
+    profiles: ["test"]
+    container_name: conduit-test-backend
+    build:
+      context: ./backend
+    env_file: ./backend/.env.test
+    environment:
+      # .env.test's POSTGRES_HOST/PORT (localhost:5433) target the host-side
+      # mapping from the README's `docker run -p 5433:5432`; inside the
+      # Compose network test-db is reachable at its service name on its
+      # container-internal port 5432.
+      POSTGRES_HOST: test-db
+      POSTGRES_PORT: 5432
+    volumes:
+      - ./backend:/app
+      - backend-venv:/app/.venv
+    depends_on:
+      test-db:
+        condition: service_healthy
+    # Bypass the image's default entrypoint (migrate-then-serve): the test
+    # suite creates its own schema and doesn't need Alembic or uvicorn.
+    entrypoint: ["uv", "run"]
+    command: ["pytest", "tests/", "-v"]
+
+volumes:
+  postgres-data:
+  backend-venv:
+  frontend-node-modules:
