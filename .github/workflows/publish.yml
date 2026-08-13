@@ -8,9 +8,7 @@ name: Publish images
 # retry a publish that failed for unrelated reasons (registry hiccup, ...).
 on:
   push:
-    # TEMPORARY: test/validate-publish added to dry-run this workflow for
-    # real before merging. Remove before merging feature/task_2_ci.
-    branches: [main, test/validate-publish]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
