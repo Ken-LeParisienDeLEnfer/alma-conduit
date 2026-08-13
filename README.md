@@ -16,8 +16,9 @@ Feel free to explore the application to discover its features. Note that the app
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [How to submit your answers](#how-to-submit-your-answers)
-- [How to run the application](#how-to-run-the-application)
-- [How to run the application's tests?](#how-to-run-the-applications-tests)
+- [How to run the application (legacy, manual setup)](#how-to-run-the-application-legacy-manual-setup)
+- [How to run the application's tests? (legacy, manual setup)](#how-to-run-the-applications-tests-legacy-manual-setup)
+- [Local development environment (recommended)](#local-development-environment-recommended)
 - [Tasks](#tasks)
   - [Task 1: Standard local development environment](#task-1-standard-local-development-environment)
   - [Task 2: Continuous Integration](#task-2-continuous-integration)
@@ -33,7 +34,10 @@ In each pull request, you should explain the changes you made to the codebase, a
 
 AI-assisted coding tools (Claude, Copilot, Codex, Gemini, etc.) are allowed. Whether you choose to use them or solve the tasks manually is entirely up to you. If you do use such a tool, please declare it explicitly in the pull request of each task where it was used.
 
-## How to run the application
+## How to run the application (legacy, manual setup)
+
+> [!NOTE]
+> This manual setup is kept for reference only. The recommended way to run the application locally is described in [Local development environment (recommended)](#local-development-environment-recommended) below, and requires none of the local installs described here.
 
 Running this application locally requires the installation of [uv](https://docs.astral.sh/uv/getting-started/installation/), [Node.js and npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), as well as PostgreSQL.
 
@@ -78,7 +82,10 @@ To run the application's frontend, enter the `frontend` folder, then:
 
 The frontend should run on http://localhost:4100.
 
-## How to run the application's tests?
+## How to run the application's tests? (legacy, manual setup)
+
+> [!NOTE]
+> This manual setup is kept for reference only. See [Local development environment (recommended)](#local-development-environment-recommended) below for the recommended way to run the test suites (`make test-backend` / `make test-frontend`), which requires none of the local installs described here.
 
 **Backend tests**
 
@@ -116,6 +123,30 @@ then run the tests:
 ```bash
 npm test -- --watchAll=false
 ```
+
+## Local development environment (recommended)
+
+The whole stack — frontend, backend and PostgreSQL — runs with a single command, with no local install of uv, Node.js or PostgreSQL required.
+
+**Prerequisites**
+
+- [Docker](https://docs.docker.com/get-docker/) (with Compose v2, bundled with Docker Desktop)
+- [GNU Make](https://www.gnu.org/software/make/) — a thin, discoverable wrapper around the `docker compose` commands below; not strictly required, since every target can be run as the equivalent `docker compose` command directly (see [Makefile](./Makefile))
+
+**Quick start**
+
+```bash
+make up
+```
+
+This builds the images, starts PostgreSQL, applies database migrations automatically, and starts the backend and frontend with hot reload on file changes:
+
+- Frontend: http://localhost:4100
+- Backend API docs: http://localhost:8080
+
+**Other commands**
+
+All recurring commands (starting/stopping the stack, running the backend and frontend test suites, applying migrations by hand, tailing logs, ...) are defined as `make` targets. Run `make help` to list them, or read the [Makefile](./Makefile) directly.
 
 ## Tasks
 
