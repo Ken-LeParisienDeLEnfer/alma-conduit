@@ -1,0 +1,149 @@
+name: Release
+
+# Every push to main is a release: build+push the images (per Task 2), then
+# bump infrastructure/release.yaml's version, tag it, and publish a GitHub
+# Release with auto-generated notes. paths-ignore on release.yaml itself is
+# the loop guard: the release job's own commit only touches that file, so
+# it never re-triggers this workflow. workflow_dispatch allows a manual
+# re-run (e.g. to retry a release that failed for unrelated reasons).
+on:
+  push:
+    # TEMPORARY: test/validate-release added to dry-run this workflow for
+    # real before merging. Remove before merging feature/task_3_releasing.
+    branches: [main, test/validate-release]
+    paths-ignore:
+      - infrastructure/release.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: read
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR image paths must be lowercase; the repo name isn't. The rolling
+      # ":main" tag only moves on a real push to main — a manual
+      # workflow_dispatch run still gets a real, pushed, SHA-tagged image,
+      # just without repointing ":main" at a non-main run.
+      - name: Compute image tags
+        id: image
+        run: |
+          name="${REGISTRY}/${{ github.repository }}-${{ matrix.service }}"
+          name="${name,,}"
+          tags="$name:${{ github.sha }}"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            tags="$(printf '%s\n%s' "$tags" "$name:main")"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+
+      # Required for a reliable build+push: without a docker-container
+      # builder, larger images (the frontend's node_modules-heavy build in
+      # particular) can hit "ERROR: failed to build: unknown blob" on push.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.service }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ steps.image.outputs.tags }}
+
+  release:
+    name: Bump version and release
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The bump type comes from a label (release:major / release:minor /
+      # release:patch) on the PR that was merged to produce this commit —
+      # see README.md's "Releasing" section. No label -> patch, so a
+      # forgotten label never blocks a release, it just defaults safely.
+      - name: Determine version bump from PR label
+        id: bump
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          labels="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '.[0].labels[].name' 2>/dev/null || true)"
+          if echo "$labels" | grep -qx "release:major"; then
+            bump=major
+          elif echo "$labels" | grep -qx "release:minor"; then
+            bump=minor
+          else
+            bump=patch
+          fi
+          echo "Resolved bump: $bump (PR labels: $(echo "$labels" | tr '\n' ' '))"
+          echo "bump=$bump" >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version
+        id: version
+        run: |
+          current="$(grep -oE '^version: .*' infrastructure/release.yaml | awk '{print $2}')"
+          IFS='.' read -r major minor patch <<< "$current"
+          case "${{ steps.bump.outputs.bump }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+          echo "current=$current" >> "$GITHUB_OUTPUT"
+          echo "next=$major.$minor.$patch" >> "$GITHUB_OUTPUT"
+
+      - name: Update infrastructure/release.yaml
+        run: |
+          name_backend="${REGISTRY}/${{ github.repository }}-backend"
+          name_frontend="${REGISTRY}/${{ github.repository }}-frontend"
+          name_backend="${name_backend,,}"
+          name_frontend="${name_frontend,,}"
+          cat > infrastructure/release.yaml <<EOF
+          version: ${{ steps.version.outputs.next }}
+
+          images:
+            backend: ${name_backend}:${{ github.sha }}
+            frontend: ${name_frontend}:${{ github.sha }}
+          EOF
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add infrastructure/release.yaml
+          git commit -m "chore(release): v${{ steps.version.outputs.next }}"
+          git tag "v${{ steps.version.outputs.next }}"
+          git push origin "HEAD:${{ github.ref_name }}"
+          git push origin "v${{ steps.version.outputs.next }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.next }}" \
+            --title "v${{ steps.version.outputs.next }}" \
+            --generate-notes
