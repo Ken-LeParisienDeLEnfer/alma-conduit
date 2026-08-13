@@ -8,9 +8,7 @@ name: Release
 # re-run (e.g. to retry a release that failed for unrelated reasons).
 on:
   push:
-    # TEMPORARY: test/validate-release added to dry-run this workflow for
-    # real before merging. Remove before merging feature/task_3_releasing.
-    branches: [main, test/validate-release]
+    branches: [main]
     paths-ignore:
       - infrastructure/release.yaml
   workflow_dispatch:
