@@ -1,5 +1,5 @@
-version: 1.0.0
+version: 1.0.1
 
 images:
-  backend: <backend artifact URI>
-  frontend: <frontend artifact URI>
+  backend: ghcr.io/alma-hiring/devops-hiring-test-ken-leparisiendelenfer-backend:577b29cdb0ee1e9f992a731321ba777aa1b89b4f
+  frontend: ghcr.io/alma-hiring/devops-hiring-test-ken-leparisiendelenfer-frontend:577b29cdb0ee1e9f992a731321ba777aa1b89b4f
