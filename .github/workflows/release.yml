@@ -1,16 +1,18 @@
 name: Release
 
 # Every push to main is a release: build+push the images (per Task 2), then
-# bump infrastructure/release.yaml's version, tag it, and publish a GitHub
-# Release with auto-generated notes. paths-ignore on release.yaml itself is
-# the loop guard: the release job's own commit only touches that file, so
-# it never re-triggers this workflow. workflow_dispatch allows a manual
-# re-run (e.g. to retry a release that failed for unrelated reasons).
+# bump infrastructure/release.yaml's version (plus the app-facing version
+# strings in backend/version.py and frontend/package.json), tag it, and
+# publish a GitHub Release with auto-generated notes. The loop guard is the
+# "[skip ci]" marker in the release job's own commit message (GitHub Actions
+# natively skips push-triggered runs for such a commit) rather than a
+# paths-ignore list, since that commit now touches more than one file and a
+# path-based guard would need to be kept in sync with all of them.
+# workflow_dispatch allows a manual re-run (e.g. to retry a release that
+# failed for unrelated reasons).
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - infrastructure/release.yaml
   workflow_dispatch:
 
 permissions:
@@ -29,7 +31,8 @@ jobs:
       matrix:
         service: [backend, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
       # GHCR image paths must be lowercase; the repo name isn't. The rolling
       # ":main" tag only moves on a real push to main — a manual
@@ -55,7 +58,8 @@ jobs:
       # Required for a reliable build+push: without a docker-container
       # builder, larger images (the frontend's node_modules-heavy build in
       # particular) can hit "ERROR: failed to build: unknown blob" on push.
-      - uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -76,7 +80,8 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
       # The bump type comes from a label (release:major / release:minor /
       # release:patch) on the PR that was merged to produce this commit —
@@ -128,12 +133,24 @@ jobs:
         env:
           REGISTRY: ${{ env.REGISTRY }}
 
+      # Keeps the version FastAPI/health-check serve (backend/version.py) and
+      # the frontend's package metadata (frontend/package.json) from drifting
+      # from what infrastructure/release.yaml just declared. Plain sed since
+      # each file has exactly one "version" key to replace.
+      - name: Bump application version files
+        run: |
+          sed -i "s/\"version\": \"[0-9.]*\"/\"version\": \"${{ steps.version.outputs.next }}\"/" backend/version.py
+          sed -i "s/\"version\": \"[0-9.]*\"/\"version\": \"${{ steps.version.outputs.next }}\"/" frontend/package.json
+
+      # "[skip ci]" in the message is the loop guard: GitHub Actions skips
+      # push-triggered workflow runs for a commit whose message contains it,
+      # regardless of which files it touches (see the `on:` block above).
       - name: Commit and tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add infrastructure/release.yaml
-          git commit -m "chore(release): v${{ steps.version.outputs.next }}"
+          git add infrastructure/release.yaml backend/version.py frontend/package.json
+          git commit -m "chore(release): v${{ steps.version.outputs.next }} [skip ci]"
           git tag "v${{ steps.version.outputs.next }}"
           git push origin "HEAD:${{ github.ref_name }}"
           git push origin "v${{ steps.version.outputs.next }}"

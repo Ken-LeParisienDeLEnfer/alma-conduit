@@ -173,7 +173,7 @@ See [.github/workflows](./.github/workflows) for the full definitions.
 Every merge to `main` is a release: no manual step, no hand-editing [infrastructure/release.yaml](./infrastructure/release.yaml). The `Release` workflow, once the images above are pushed:
 
 1. Reads the label on the pull request that was just merged to decide the version bump.
-2. Bumps `infrastructure/release.yaml`'s `version`, points its `images` at the commit's freshly-pushed GHCR images, and commits that change directly to `main`.
+2. Bumps `infrastructure/release.yaml`'s `version`, points its `images` at the commit's freshly-pushed GHCR images, mirrors the version into `backend/version.py` and `frontend/package.json` so the running app reports the same version it was released as, and commits that change directly to `main` (tagged `[skip ci]`, so this commit doesn't re-trigger the `Release` workflow).
 3. Tags the release (`vX.Y.Z`) and publishes a [GitHub Release](../../releases) with auto-generated notes (grouped from the PRs merged since the last release).
 
 **Label your PR before merging** — this is what decides the version bump:
