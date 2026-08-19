@@ -75,6 +75,22 @@ jobs:
           echo "current=$current" >> "$GITHUB_OUTPUT"
           echo "next=$major.$minor.$patch" >> "$GITHUB_OUTPUT"
 
+      # Plain console output for anyone scanning the log, plus a step
+      # summary so the resolved version is visible on the run's overview
+      # page without opening a single step.
+      - name: Print resolved version
+        run: |
+          echo "Releasing v${{ steps.version.outputs.next }} (previous: v${{ steps.version.outputs.current }}, bump: ${{ steps.bump.outputs.bump }})"
+          {
+            echo "### Release v${{ steps.version.outputs.next }}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Previous version | \`v${{ steps.version.outputs.current }}\` |"
+            echo "| Bump | \`${{ steps.bump.outputs.bump }}\` |"
+            echo "| Next version | \`v${{ steps.version.outputs.next }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   publish:
     name: Build and push images
     needs: prepare
