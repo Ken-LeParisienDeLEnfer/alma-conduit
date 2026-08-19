@@ -25,6 +25,13 @@ RUN uv sync --frozen --no-install-project --group dev
 COPY . .
 RUN uv sync --frozen --group dev
 
+# Bakes the release version into the image at build time, so the running
+# app reports exactly what it was released as without ever committing that
+# version to git before the image is confirmed built and pushed. Defaults
+# to "dev" when no build-arg is passed (e.g. local `docker compose build`).
+ARG APP_VERSION=dev
+RUN sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"${APP_VERSION}\"/" version.py
+
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
