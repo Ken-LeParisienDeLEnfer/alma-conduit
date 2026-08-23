@@ -13,6 +13,23 @@ on:
       - infrastructure/release.yaml
   workflow_dispatch:
 
+# Two pushes to main close together would otherwise trigger two truly
+# concurrent runs that both read the same current version from
+# infrastructure/release.yaml and compute the same next version, wasting a
+# full duplicate build+push before one of them loses the git push race.
+# Queuing (not canceling) a second run until the first fully finishes avoids
+# that waste. This does NOT eliminate the race itself — GitHub's merge queue
+# would serialize merges upstream and make it near-impossible, but merge
+# queue is only available for organization-owned repositories, not this
+# personal-account one, so that option is off the table here. If two merges
+# still land close enough together to collide, this job intentionally does
+# NOT retry or rebase to self-correct — its "Commit and tag" step just fails
+# (non-fast-forward push), visibly, and needs a manual workflow_dispatch
+# re-run once main is stable. No silent auto-recovery, by design.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write
@@ -76,7 +93,38 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
+      # main requires a pull request to merge (branch protection), and the
+      # default GITHUB_TOKEN's bot identity can't be added to that rule's
+      # bypass list — only real GitHub Apps can. This mints a short-lived
+      # installation token for a dedicated App (installed on this repo,
+      # permissioned to Contents: write only, added to the bypass list) so
+      # this job can still push its release commit straight to main.
+      - name: Generate release bot token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      # persist-credentials (default true) wires this token into git's
+      # credential helper for the rest of the job, so the plain `git push`
+      # in "Commit and tag" below uses it automatically.
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      # The numeric user id lookup is what makes GitHub render the commit
+      # with the App's own bot avatar/profile instead of a generic "unknown
+      # author" — same pattern actions/create-github-app-token's own docs
+      # recommend.
+      - name: Configure git identity as the release bot
+        id: bot-identity
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          user_id="$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)"
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${user_id}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
 
       # The bump type comes from a label (release:major / release:minor /
       # release:patch) on the PR that was merged to produce this commit —
@@ -85,7 +133,7 @@ jobs:
       - name: Determine version bump from PR label
         id: bump
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           labels="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
             --jq '.[0].labels[].name' 2>/dev/null || true)"
@@ -130,8 +178,6 @@ jobs:
 
       - name: Commit and tag
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add infrastructure/release.yaml
           git commit -m "chore(release): v${{ steps.version.outputs.next }}"
           git tag "v${{ steps.version.outputs.next }}"
@@ -140,7 +186,7 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           gh release create "v${{ steps.version.outputs.next }}" \
             --title "v${{ steps.version.outputs.next }}" \
