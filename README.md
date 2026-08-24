@@ -176,6 +176,8 @@ Every merge to `main` is a release: no manual step, no hand-editing [infrastruct
 2. Bumps `infrastructure/release.yaml`'s `version`, points its `images` at the commit's freshly-pushed GHCR images, and commits that change directly to `main`.
 3. Tags the release (`vX.Y.Z`) and publishes a [GitHub Release](../../releases) with auto-generated notes (grouped from the PRs merged since the last release).
 
+`main` requires a pull request to merge (branch protection) — including for the `Release` workflow's own commit above. It authenticates as a dedicated GitHub App, exempted from that rule via the branch protection bypass list, instead of the default `GITHUB_TOKEN` (which can't be exempted), so it can still push the version bump straight to `main`.
+
 **Label your PR before merging** — this is what decides the version bump:
 
 | Label | Bump | Use for |
