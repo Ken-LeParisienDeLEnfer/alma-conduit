@@ -1,5 +1,5 @@
-version: 1.0.2
+version: 1.0.3
 
 images:
-  backend: ghcr.io/ken-leparisiendelenfer/alma-conduit-backend:c4816513e7b33139872604d581c7bd52ea446a97
-  frontend: ghcr.io/ken-leparisiendelenfer/alma-conduit-frontend:c4816513e7b33139872604d581c7bd52ea446a97
+  backend: ghcr.io/ken-leparisiendelenfer/alma-conduit-backend:d0c1c3c00c5204de27664b8eb9e08dc45db7cb95
+  frontend: ghcr.io/ken-leparisiendelenfer/alma-conduit-frontend:d0c1c3c00c5204de27664b8eb9e08dc45db7cb95
