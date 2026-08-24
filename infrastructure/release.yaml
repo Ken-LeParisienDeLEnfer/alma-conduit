@@ -1,5 +1,5 @@
-version: 1.0.1
+version: 1.0.2
 
 images:
-  backend: ghcr.io/alma-hiring/devops-hiring-test-ken-leparisiendelenfer-backend:0f422f6692a7bebd64063f5e3c54ac32357f539f
-  frontend: ghcr.io/alma-hiring/devops-hiring-test-ken-leparisiendelenfer-frontend:0f422f6692a7bebd64063f5e3c54ac32357f539f
+  backend: ghcr.io/ken-leparisiendelenfer/alma-conduit-backend:c4816513e7b33139872604d581c7bd52ea446a97
+  frontend: ghcr.io/ken-leparisiendelenfer/alma-conduit-frontend:c4816513e7b33139872604d581c7bd52ea446a97
